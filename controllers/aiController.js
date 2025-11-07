@@ -138,14 +138,17 @@ export const aiController = {
         ? `${context}\n\nUser Question: ${question}`
         : question;
 
+      console.log('🤖 Chatbot Request:', { question, hasContext: !!context });
       const response = await geminiClient.generateContent(fullPrompt);
+      console.log('✅ Gemini Response received');
 
       res.status(200).json({
         message: 'Chatbot response generated',
         response,
       });
     } catch (error) {
-      console.error('Chatbot response error:', error);
+      console.error('❌ Chatbot response error:', error.message);
+      console.error('Full error:', error);
       res.status(500).json({ message: 'Server error', error: error.message });
     }
   },

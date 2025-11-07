@@ -13,7 +13,7 @@ const generateToken = (user) => {
 export const authController = {
   async signup(req, res) {
     try {
-      const { email, password, name } = req.body;
+      const { email, password, name, role } = req.body;
 
       if (!email || !password || !name) {
         return res.status(400).json({ message: 'All fields are required' });
@@ -29,7 +29,7 @@ export const authController = {
         name,
         email: email.toLowerCase(),
         password: hashedPassword,
-        role: 'user',
+        role: role || 'user', // Use provided role or default to 'user'
       });
 
       await user.save();
@@ -69,9 +69,14 @@ export const authController = {
         return res.status(400).json({ message: 'Invalid email or password' });
       }
 
-      // Check role if admin login
-      if (role && user.role !== role && user.role === 'user') {
-        return res.status(403).json({ message: 'Invalid role for this account' });
+      // Check role if admin login - verify user has admin role
+      if (role && role !== 'user') {
+        if (user.role === 'user') {
+          return res.status(403).json({ message: 'This account does not have admin access' });
+        }
+        if (user.role !== role) {
+          return res.status(403).json({ message: `This account is not a ${role}` });
+        }
       }
 
       const token = generateToken(user);
