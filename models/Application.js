@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 
 const applicationSchema = new mongoose.Schema({
-  applicantId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  applicantId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
   jobId: { type: mongoose.Schema.Types.ObjectId, ref: 'Job', required: true },
   jobTitle: { type: String, required: true },
   name: { type: String, required: true },

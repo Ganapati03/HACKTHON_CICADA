@@ -7,20 +7,35 @@ import fs from 'fs';
 export const applicationController = {
   async createApplication(req, res) {
     try {
+      console.log('📝 Application submission received');
+      console.log('Request body:', req.body);
+      console.log('Uploaded file:', req.file);
+      
       const { jobId, jobTitle, name, email, position } = req.body;
       const resumeUrl = req.file?.path || null;
       const resumeCloudinaryId = req.file?.filename || null;
 
-      if (!jobId || !name || !email || !position || !resumeUrl) {
-        return res.status(400).json({ message: 'Missing required fields or resume' });
+      console.log('Parsed data:', { jobId, jobTitle, name, email, position, resumeUrl });
+
+      if (!jobId || !name || !email || !position) {
+        console.log('❌ Missing required fields');
+        return res.status(400).json({ message: 'Missing required fields' });
+      }
+
+      if (!resumeUrl) {
+        console.log('❌ No resume file uploaded');
+        return res.status(400).json({ message: 'Resume file is required' });
       }
 
       // Check if already applied
+      console.log('🔍 Checking for existing application...');
       const existingApp = await Application.findOne({ jobId, email });
       if (existingApp) {
+        console.log('❌ Already applied for this job');
         return res.status(400).json({ message: 'You have already applied for this job' });
       }
 
+      console.log('✅ Starting AI resume analysis...');
       // AI Resume Analysis
       let aiScore = 75; // Default score
       let aiAnalysis = 'Resume received and processed';
@@ -30,10 +45,12 @@ export const applicationController = {
         const parsed = JSON.parse(analysisResult);
         aiScore = parsed.score || 75;
         aiAnalysis = analysisResult;
+        console.log('✅ AI Analysis complete. Score:', aiScore);
       } catch (aiError) {
-        console.log('AI analysis skipped, using default scores');
+        console.log('⚠️  AI analysis skipped:', aiError.message);
       }
 
+      console.log('💾 Creating application document...');
       const application = new Application({
         applicantId: req.user?.id || null,
         jobId,
@@ -48,21 +65,40 @@ export const applicationController = {
         status: 'Under Review',
       });
 
+      console.log('💾 Saving to database...');
       await application.save();
+      console.log('✅ Application saved to database:', application._id);
 
       // Send acknowledgment email
-      await mail.sendApplicationAcknowledgment(email, name, position);
+      try {
+        console.log('📧 Sending acknowledgment email...');
+        await mail.sendApplicationAcknowledgment(email, name, position);
+        console.log('✅ Acknowledgment email sent');
+      } catch (emailError) {
+        console.log('⚠️  Email sending failed:', emailError.message);
+      }
 
       // Update job applicant count
-      await Job.findByIdAndUpdate(jobId, { $inc: { applicants: 1 } });
+      try {
+        console.log('📊 Updating job applicant count...');
+        await Job.findByIdAndUpdate(jobId, { $inc: { applicants: 1 } });
+        console.log('✅ Job applicant count updated');
+      } catch (jobError) {
+        console.log('⚠️  Job update failed:', jobError.message);
+      }
 
       res.status(201).json({
         message: 'Application submitted successfully',
         application,
       });
     } catch (error) {
-      console.error('Create application error:', error);
-      res.status(500).json({ message: 'Server error', error: error.message });
+      console.error('❌ Create application error:', error);
+      console.error('Error stack:', error.stack);
+      res.status(500).json({ 
+        message: 'Server error', 
+        error: error.message,
+        details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      });
     }
   },
 

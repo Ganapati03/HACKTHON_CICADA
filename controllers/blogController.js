@@ -19,6 +19,23 @@ export const blogController = {
     }
   },
 
+  async getAllBlogsForAdmin(req, res) {
+    try {
+      // Get all blogs (including drafts) for developers
+      const blogs = await Blog.find()
+        .populate('author', 'name email')
+        .sort({ createdAt: -1 });
+
+      res.status(200).json({
+        message: 'All blogs retrieved',
+        blogs,
+      });
+    } catch (error) {
+      console.error('Get all blogs error:', error);
+      res.status(500).json({ message: 'Server error', error: error.message });
+    }
+  },
+
   async getBlogById(req, res) {
     try {
       const blog = await Blog.findById(req.params.id)

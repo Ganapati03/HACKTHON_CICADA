@@ -14,7 +14,7 @@ const resumeStorage = new CloudinaryStorage({
   params: {
     folder: 'mastersolis_uploads/resumes',
     resource_type: 'auto',
-    allowed_formats: ['pdf', 'doc', 'docx'],
+    allowed_formats: ['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png', 'gif', 'webp'],
   },
 });
 

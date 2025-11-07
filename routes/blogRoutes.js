@@ -6,6 +6,7 @@ import { blogImageUpload } from '../utils/cloudinary.js';
 const router = express.Router();
 
 router.get('/', blogController.getBlogs);
+router.get('/admin/all', verifyToken, authorizeRoles('developer'), blogController.getAllBlogsForAdmin);
 router.get('/:id', blogController.getBlogById);
 router.post('/', verifyToken, authorizeRoles('developer'), blogImageUpload.single('image'), blogController.createBlog);
 router.put('/:id', verifyToken, authorizeRoles('developer'), blogController.updateBlog);
