@@ -10,6 +10,9 @@ import Careers from './pages/Careers';
 import Contact from './pages/Contact';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
+import UserLogin from './pages/UserLogin';
+import AdminLogin from './pages/AdminLogin';
+import AdminSignup from './pages/AdminSignup';
 import UserDashboard from './pages/user/UserDashboard';
 import ExamBooking from './pages/user/ExamBooking';
 import MyExams from './pages/user/MyExams';
@@ -61,7 +64,10 @@ function AppContent() {
         <Route path="/careers" element={<Careers />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/login/user" element={<UserLogin />} />
         <Route path="/signup" element={<Signup />} />
+        <Route path="/admin/login" element={<AdminLogin />} />
+        <Route path="/admin/signup" element={<AdminSignup />} />
 
         {/* User Protected Routes */}
         <Route path="/user/dashboard" element={<ProtectedRoute><UserDashboard /></ProtectedRoute>} />

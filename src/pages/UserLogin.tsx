@@ -1,38 +1,30 @@
 import { motion } from 'motion/react';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Brain, Mail, Lock, User } from 'lucide-react';
+import { Brain, Mail, Lock } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
 import GlassCard from '../components/GlassCard';
 
-export default function Signup() {
-  const [name, setName] = useState('');
+export default function UserLogin() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const { signup } = useAuth();
+  const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (password !== confirmPassword) {
-      toast.error('Passwords do not match');
-      return;
-    }
-
     try {
-      await signup(email, password, name);
-      toast.success('Account created!', {
-        description: 'Welcome to Mastersolis Infotech',
+      await login(email, password, 'user');
+      toast.success('Welcome back!', {
+        description: 'Login successful',
       });
       navigate('/user/dashboard');
     } catch (error) {
-      toast.error('Signup failed', {
-        description: 'Please try again',
+      toast.error('Login failed', {
+        description: 'Please check your credentials',
       });
     }
   };
@@ -56,27 +48,12 @@ export default function Signup() {
             </motion.div>
             <span className="text-2xl text-[#f1f5f9]">Mastersolis</span>
           </Link>
-          <h1 className="text-3xl text-[#f1f5f9] mb-2">Create Account</h1>
-          <p className="text-[#94a3b8]">Join us as a candidate and start your journey</p>
+          <h1 className="text-3xl text-[#f1f5f9] mb-2">User Login</h1>
+          <p className="text-[#94a3b8]">Access your candidate portal</p>
         </div>
 
         <GlassCard>
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <label className="text-[#f1f5f9] mb-2 block">Full Name</label>
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[#6366f1]" />
-                <Input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
-                  placeholder="John Doe"
-                  className="pl-10 bg-[#0f172a]/50 border-[#6366f1]/30 text-[#f1f5f9]"
-                />
-              </div>
-            </div>
-
             <div>
               <label className="text-[#f1f5f9] mb-2 block">Email</label>
               <div className="relative">
@@ -107,39 +84,24 @@ export default function Signup() {
               </div>
             </div>
 
-            <div>
-              <label className="text-[#f1f5f9] mb-2 block">Confirm Password</label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[#6366f1]" />
-                <Input
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  required
-                  placeholder="••••••••"
-                  className="pl-10 bg-[#0f172a]/50 border-[#6366f1]/30 text-[#f1f5f9]"
-                />
-              </div>
-            </div>
-
             <Button
               type="submit"
               className="w-full bg-gradient-to-r from-[#6366f1] to-[#14b8a6] rounded-lg py-6"
             >
-              Create Account
+              Login
             </Button>
 
             <p className="text-center text-[#94a3b8]">
-              Already have an account?{' '}
-              <Link to="/login" className="text-[#6366f1] hover:underline">
-                Login
+              Don't have an account?{' '}
+              <Link to="/signup" className="text-[#6366f1] hover:underline">
+                Sign up
               </Link>
             </p>
 
             <p className="text-center text-[#94a3b8] text-sm">
-              Need admin access?{' '}
-              <Link to="/admin/signup" className="text-[#14b8a6] hover:underline">
-                Request here
+              Admin?{' '}
+              <Link to="/admin/login" className="text-[#14b8a6] hover:underline">
+                Login here
               </Link>
             </p>
           </form>
