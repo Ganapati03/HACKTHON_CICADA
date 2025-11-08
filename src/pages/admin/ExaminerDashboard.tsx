@@ -2,7 +2,7 @@ import { motion } from 'motion/react';
 import { useState, useEffect } from 'react';
 import AdminLayout from '../../components/AdminLayout';
 import GlassCard from '../../components/GlassCard';
-import { FileText, CheckCircle, Clock, AlertTriangle, Plus, Loader, Eye, Trash2 } from 'lucide-react';
+import { FileText, CheckCircle, Clock, AlertTriangle, Plus, Loader, Eye, Trash2, Check, X } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
@@ -11,14 +11,16 @@ import { Textarea } from '../../components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table';
 import { toast } from 'sonner';
-import { examAPI } from '../../api/client';
+import { examAPI, examRequestAPI } from '../../api/client';
 
 export default function ExaminerDashboard() {
   const [showExamDialog, setShowExamDialog] = useState(false);
+  const [selectedRequestId, setSelectedRequestId] = useState(null);
   const [showQuestionsDialog, setShowQuestionsDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [selectedExam, setSelectedExam] = useState<any>(null);
+  const [selectedExam, setSelectedExam] = useState(null);
   const [exams, setExams] = useState([]);
+  const [examRequests, setExamRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -30,17 +32,21 @@ export default function ExaminerDashboard() {
   });
 
   useEffect(() => {
-    fetchExams();
+    fetchData();
   }, []);
 
-  const fetchExams = async () => {
+  const fetchData = async () => {
     try {
       setLoading(true);
-      const response = await examAPI.getAll();
-      setExams(response.data.exams || []);
+      const [examsRes, requestsRes] = await Promise.all([
+        examAPI.getAll(),
+        examRequestAPI.getAll(),
+      ]);
+      setExams(examsRes.data.exams || []);
+      setExamRequests(requestsRes.data.requests || []);
     } catch (error) {
-      console.error('Failed to fetch exams:', error);
-      toast.error('Failed to load exams');
+      console.error('Failed to fetch data:', error);
+      toast.error('Failed to load data');
     } finally {
       setLoading(false);
     }
@@ -49,35 +55,8 @@ export default function ExaminerDashboard() {
   const stats = [
     { label: 'Total Exams', value: exams.length.toString(), icon: FileText, color: 'text-[#6366f1]' },
     { label: 'Active Exams', value: exams.filter((e: any) => e.status === 'Active').length.toString(), icon: Clock, color: 'text-[#14b8a6]' },
-    { label: 'Completed', value: '0', icon: CheckCircle, color: 'text-[#10b981]' },
+    { label: 'Pending Requests', value: examRequests.filter((r: any) => r.status === 'pending').length.toString(), icon: Clock, color: 'text-[#f97316]' },
     { label: 'Cheat Detections', value: '0', icon: AlertTriangle, color: 'text-[#f97316]' },
-  ];
-
-  const examRequests = [
-    {
-      id: 1,
-      title: 'React Assessment for Senior Role',
-      requestedBy: 'HR Team',
-      date: 'Nov 5, 2024',
-      status: 'pending',
-      priority: 'high',
-    },
-    {
-      id: 2,
-      title: 'Python Backend Developer Test',
-      requestedBy: 'HR Team',
-      date: 'Nov 4, 2024',
-      status: 'accepted',
-      priority: 'medium',
-    },
-    {
-      id: 3,
-      title: 'Cloud Architecture Assessment',
-      requestedBy: 'HR Team',
-      date: 'Nov 3, 2024',
-      status: 'completed',
-      priority: 'high',
-    },
   ];
 
   const tasks = [
@@ -138,15 +117,33 @@ export default function ExaminerDashboard() {
         difficulty: examForm.difficulty,
       };
 
-      await examAPI.create(examData);
+      // Create the exam
+      const examResponse = await examAPI.create(examData);
+      const createdExam = examResponse.data.exam;
       
-      toast.success('Exam created successfully!', {
-        description: 'AI has generated initial question set',
-      });
+      // If there's a selected request, link the exam to it
+      if (selectedRequestId) {
+        try {
+          await examRequestAPI.linkExam(selectedRequestId, createdExam._id);
+          toast.success('Exam created and linked to request successfully!', {
+            description: 'AI has generated initial question set',
+          });
+        } catch (linkError) {
+          console.error('Failed to link exam to request:', linkError);
+          toast.warning('Exam created but failed to link to request', {
+            description: 'Please manually link the exam to the request',
+          });
+        }
+      } else {
+        toast.success('Exam created successfully!', {
+          description: 'AI has generated initial question set',
+        });
+      }
       
       setShowExamDialog(false);
+      setSelectedRequestId(null);
       setExamForm({ title: '', description: '', duration: '', difficulty: 'intermediate' });
-      fetchExams(); // Refresh exam list
+      fetchData(); // Refresh data
     } catch (error: any) {
       console.error('Create exam error:', error);
       toast.error('Failed to create exam', {
@@ -178,7 +175,7 @@ export default function ExaminerDashboard() {
       toast.success('Exam deleted successfully!');
       setShowDeleteDialog(false);
       setSelectedExam(null);
-      fetchExams();
+      fetchData();
     } catch (error: any) {
       console.error('Delete exam error:', error);
       toast.error('Failed to delete exam', {
@@ -186,6 +183,33 @@ export default function ExaminerDashboard() {
       });
     } finally {
       setDeleting(false);
+    }
+  };
+
+  const handleAcceptRequest = async (requestId: string) => {
+    try {
+      await examRequestAPI.accept(requestId);
+      toast.success('Request accepted!', {
+        description: 'You can now create the exam for this request',
+      });
+      setSelectedRequestId(requestId); // Pre-select this request for exam creation
+      fetchData();
+    } catch (error: any) {
+      toast.error('Failed to accept request', {
+        description: error.response?.data?.message || 'Please try again',
+      });
+    }
+  };
+
+  const handleRejectRequest = async (requestId: string) => {
+    try {
+      await examRequestAPI.reject(requestId);
+      toast.success('Request rejected');
+      fetchData();
+    } catch (error: any) {
+      toast.error('Failed to reject request', {
+        description: error.response?.data?.message || 'Please try again',
+      });
     }
   };
 
@@ -295,44 +319,111 @@ export default function ExaminerDashboard() {
           transition={{ delay: 0.5 }}
           className="mb-6 sm:mb-8"
         >
-          <h2 className="text-xl sm:text-2xl text-[#f1f5f9] mb-4 sm:mb-6">HR Exam Requests</h2>
+          <h2 className="text-xl sm:text-2xl text-[#f1f5f9] mb-4 sm:mb-6">HR Exam Requests ({examRequests.length})</h2>
+          {loading ? (
+            <div className="flex justify-center py-10">
+              <Loader className="w-8 h-8 text-[#6366f1] animate-spin" />
+            </div>
+          ) : examRequests.length === 0 ? (
+            <div className="text-center py-10 bg-[#1e293b]/40 rounded-lg border border-[#6366f1]/20">
+              <p className="text-[#94a3b8]">No exam requests from HR yet</p>
+            </div>
+          ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {examRequests.map((request) => (
-              <GlassCard key={request.id}>
+              <GlassCard key={request._id}>
                 <div className="flex items-start justify-between mb-4">
                   <Badge className={
                     request.status === 'pending'
                       ? 'bg-[#f97316]/20 text-[#f97316]'
                       : request.status === 'accepted'
                       ? 'bg-[#14b8a6]/20 text-[#14b8a6]'
-                      : 'bg-[#10b981]/20 text-[#10b981]'
+                      : request.status === 'completed'
+                      ? 'bg-[#10b981]/20 text-[#10b981]'
+                      : 'bg-[#94a3b8]/20 text-[#94a3b8]'
                   }>
                     {request.status}
                   </Badge>
                   <Badge variant="outline" className={
                     request.priority === 'high'
                       ? 'border-[#ef4444] text-[#ef4444]'
-                      : 'border-[#f97316] text-[#f97316]'
+                      : request.priority === 'medium'
+                      ? 'border-[#f97316] text-[#f97316]'
+                      : 'border-[#94a3b8] text-[#94a3b8]'
                   }>
                     {request.priority}
                   </Badge>
                 </div>
-                <h3 className="text-[#f1f5f9] mb-2">{request.title}</h3>
-                <p className="text-[#94a3b8] text-sm mb-4">By: {request.requestedBy}</p>
-                <p className="text-[#94a3b8] text-xs mb-4">{request.date}</p>
+                <h3 className="text-lg text-[#f1f5f9] mb-2">{request.title}</h3>
+                <p className="text-[#94a3b8] text-sm mb-4 line-clamp-2">{request.description}</p>
+                
+                <div className="space-y-2 text-sm mb-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[#94a3b8]">Duration:</span>
+                    <span className="text-[#f1f5f9]">{request.duration} mins</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[#94a3b8]">Difficulty:</span>
+                    <Badge variant="outline" className="border-[#6366f1] text-[#6366f1]">
+                      {request.difficulty}
+                    </Badge>
+                  </div>
+                  {request.requestedBy?.name && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-[#94a3b8]">Requested by:</span>
+                      <span className="text-[#f1f5f9] text-xs">{request.requestedBy.name}</span>
+                    </div>
+                  )}
+                </div>
+
                 {request.status === 'pending' && (
                   <div className="flex gap-2">
-                    <Button size="sm" className="flex-1 bg-[#10b981]">
+                    <Button 
+                      size="sm" 
+                      className="flex-1 bg-[#10b981]"
+                      onClick={() => handleAcceptRequest(request._id)}
+                    >
+                      <Check className="w-4 h-4 mr-1" />
                       Accept
                     </Button>
-                    <Button size="sm" variant="outline" className="flex-1 border-[#ef4444] text-[#ef4444]">
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      className="flex-1 border-[#ef4444] text-[#ef4444] hover:bg-[#ef4444]/10"
+                      onClick={() => handleRejectRequest(request._id)}
+                    >
+                      <X className="w-4 h-4 mr-1" />
                       Decline
                     </Button>
                   </div>
                 )}
+                {request.status === 'accepted' && (
+                  <div className="flex flex-col gap-2 mt-2">
+                    <Badge className="w-full text-center bg-[#14b8a6]/20 text-[#14b8a6]">
+                      ✓ Accepted - Create exam when ready
+                    </Badge>
+                    <Button 
+                      size="sm" 
+                      className="bg-gradient-to-r from-[#6366f1] to-[#14b8a6] hover:opacity-90"
+                      onClick={() => {
+                        setSelectedRequestId(request._id);
+                        setShowExamDialog(true);
+                      }}
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Create Exam
+                    </Button>
+                  </div>
+                )}
+                {request.status === 'completed' && request.examId && (
+                  <Badge className="w-full text-center bg-[#10b981]/20 text-[#10b981]">
+                    ✓ Exam Created
+                  </Badge>
+                )}
               </GlassCard>
             ))}
           </div>
+          )}
         </motion.div>
 
         {/* Task Cards */}
@@ -448,12 +539,23 @@ export default function ExaminerDashboard() {
       </motion.div>
 
       {/* Create Exam Dialog */}
-      <Dialog open={showExamDialog} onOpenChange={setShowExamDialog}>
+      <Dialog open={showExamDialog} onOpenChange={(open) => {
+        setShowExamDialog(open);
+        if (!open) setSelectedRequestId(null);
+      }}>
         <DialogContent className="bg-[#1e293b] border-[#6366f1]/30 text-[#f1f5f9] max-w-2xl">
           <DialogHeader>
             <DialogTitle>Create New Exam</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
+            {selectedRequestId && (
+              <div className="p-3 bg-[#6366f1]/10 rounded-lg border border-[#6366f1]/30">
+                <p className="text-sm text-[#94a3b8] mb-1">Creating exam for request:</p>
+                <p className="text-[#f1f5f9] font-medium">
+                  {examRequests.find((r: any) => r._id === selectedRequestId)?.title}
+                </p>
+              </div>
+            )}
             <div>
               <label className="text-[#f1f5f9] mb-2 block">Exam Title</label>
               <Input

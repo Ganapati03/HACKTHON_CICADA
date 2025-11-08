@@ -8,11 +8,30 @@ import { Calendar, Clock, Sparkles, User, Loader } from 'lucide-react';
 import { toast } from 'sonner';
 import { blogAPI } from '../api/client';
 import { ImageWithFallback } from '../components/figma/ImageWithFallback';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 export default function Blog() {
   const [summarizing, setSummarizing] = useState<number | null>(null);
   const [blogs, setBlogs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [genAI, setGenAI] = useState(null);
+
+  const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
+
+  // Initialize Gemini AI
+  useEffect(() => {
+    if (GEMINI_API_KEY) {
+      try {
+        const ai = new GoogleGenerativeAI(GEMINI_API_KEY);
+        setGenAI(ai);
+        console.log('✅ Blog Gemini AI initialized');
+      } catch (error) {
+        console.error('❌ Failed to initialize Gemini AI:', error);
+      }
+    } else {
+      console.warn('⚠️ Gemini API key not found');
+    }
+  }, [GEMINI_API_KEY]);
 
   useEffect(() => {
     fetchBlogs();
@@ -31,14 +50,63 @@ export default function Blog() {
     }
   };
 
-  const handleAISummarize = (blogId: string, summary: string) => {
-    setSummarizing(blogId as any);
-    setTimeout(() => {
-      setSummarizing(null);
-      toast.success('AI Summary Generated!', {
-        description: summary || 'AI-powered summary of this blog post',
+  const handleAISummarize = async (blogId, title, content) => {
+    try {
+      setSummarizing(blogId);
+      
+      console.log('📝 Generating AI summary for:', title);
+      
+      if (!genAI) {
+        throw new Error('AI assistant is not initialized. Please add VITE_GEMINI_API_KEY to your .env file');
+      }
+
+      const model = genAI.getGenerativeModel({
+        model: 'gemini-2.0-flash-exp',
+        generationConfig: {
+          temperature: 0.9,
+          topK: 64,
+          topP: 0.95,
+          maxOutputTokens: 512,
+        }
       });
-    }, 1500);
+
+      const contextPrompt = `Summarize this blog post in 2-3 sentences. Do not use emojis.
+
+Title: ${title}
+
+Content: ${content}`;
+      
+      const result = await model.generateContent(contextPrompt);
+      const response = await result.response;
+      const summary = response.text();
+      
+      console.log('✅ Summary generated:', summary);
+      
+      setSummarizing(null);
+      
+      toast.success('AI Summary Generated! ✨', {
+        description: summary,
+        duration: 10000,
+      });
+    } catch (error) {
+      console.error('❌ Gemini error:', error);
+      
+      let errorText = 'Sorry, I couldn\'t process that. Please try again! 😅';
+      
+      if (error?.message?.includes('API_KEY_INVALID') || error?.message?.includes('API key')) {
+        errorText = '🔑 API key expired or invalid. Please get a new key from https://aistudio.google.com/app/apikey and add it to .env as VITE_GEMINI_API_KEY';
+      } else if (error?.message?.includes('quota') || error?.message?.includes('RESOURCE_EXHAUSTED')) {
+        errorText = '⏰ API quota exceeded. Please try again later!';
+      } else if (error?.message?.includes('initialized')) {
+        errorText = '⏳ AI is starting up. Please add VITE_GEMINI_API_KEY to your .env file and restart!';
+      }
+      
+      toast.error('Error generating summary', {
+        description: errorText,
+      });
+      
+      setSummarizing(null);
+    }
   };
 
   return (
@@ -112,7 +180,7 @@ export default function Blog() {
                   </div>
 
                   <Button
-                    onClick={() => handleAISummarize(post._id, post.seoSummary)}
+                    onClick={() => handleAISummarize(post._id, post.title, post.content)}
                     disabled={summarizing === post._id}
                     className="w-full bg-gradient-to-r from-[#6366f1] to-[#14b8a6] rounded-lg"
                   >

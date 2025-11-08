@@ -367,6 +367,17 @@ Mastersolis HR Team`;
           >
             Projects
           </button>
+          <button
+            onClick={() => setActiveTab('examRequests')}
+            className={`px-3 sm:px-4 py-2 transition-colors text-sm sm:text-base whitespace-nowrap ${
+              activeTab === 'examRequests'
+                ? 'text-[#6366f1] border-b-2 border-[#6366f1]'
+                : 'text-[#94a3b8] hover:text-[#f1f5f9]'
+            }`}
+          >
+            <ClipboardList className="w-4 h-4 inline mr-2" />
+            Exam Requests
+          </button>
         </div>
 
         {/* Stats Grid */}
@@ -668,7 +679,173 @@ Mastersolis HR Team`;
           )}
         </motion.div>
         )}
+
+        {/* Exam Requests Tab */}
+        {activeTab === 'examRequests' && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl sm:text-2xl text-[#f1f5f9]">Exam Requests ({examRequests.length})</h2>
+            <Button
+              onClick={() => setShowExamRequestDialog(true)}
+              className="bg-gradient-to-r from-[#6366f1] to-[#14b8a6]"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Request New Exam
+            </Button>
+          </div>
+
+          {loading ? (
+            <div className="flex justify-center py-20">
+              <Loader className="w-8 h-8 text-[#6366f1] animate-spin" />
+            </div>
+          ) : examRequests.length === 0 ? (
+            <div className="text-center py-20 bg-[#1e293b]/40 rounded-lg border border-[#6366f1]/20">
+              <ClipboardList className="w-16 h-16 text-[#94a3b8] mx-auto mb-4" />
+              <p className="text-[#94a3b8] text-lg">No exam requests yet. Create your first request!</p>
+            </div>
+          ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+            {examRequests.map((request) => (
+              <GlassCard key={request._id}>
+                <div className="flex items-start justify-between mb-4">
+                  <Badge className={
+                    request.status === 'pending'
+                      ? 'bg-[#f97316]/20 text-[#f97316]'
+                      : request.status === 'accepted'
+                      ? 'bg-[#14b8a6]/20 text-[#14b8a6]'
+                      : request.status === 'completed'
+                      ? 'bg-[#10b981]/20 text-[#10b981]'
+                      : 'bg-[#94a3b8]/20 text-[#94a3b8]'
+                  }>
+                    {request.status}
+                  </Badge>
+                  <Badge variant="outline" className="border-[#6366f1] text-[#6366f1]">
+                    {request.difficulty}
+                  </Badge>
+                </div>
+
+                <h3 className="text-lg text-[#f1f5f9] mb-2">{request.title}</h3>
+                <p className="text-[#94a3b8] text-sm mb-4 line-clamp-2">{request.description}</p>
+                
+                <div className="space-y-2 text-sm mb-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[#94a3b8]">Duration:</span>
+                    <span className="text-[#f1f5f9]">{request.duration} mins</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[#94a3b8]">Priority:</span>
+                    <Badge className={
+                      request.priority === 'high'
+                        ? 'bg-[#ef4444]/20 text-[#ef4444]'
+                        : request.priority === 'medium'
+                        ? 'bg-[#f97316]/20 text-[#f97316]'
+                        : 'bg-[#94a3b8]/20 text-[#94a3b8]'
+                    }>
+                      {request.priority}
+                    </Badge>
+                  </div>
+                  {request.examId && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-[#94a3b8]">Exam:</span>
+                      <span className="text-[#10b981] text-xs">✓ Created</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    onClick={() => handleDeleteExamRequest(request._id)}
+                    variant="outline"
+                    className="flex-1 border-[#ef4444] text-[#ef4444] hover:bg-[#ef4444]/10"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              </GlassCard>
+            ))}
+          </div>
+          )}
+        </motion.div>
+        )}
       </motion.div>
+
+      {/* Exam Request Dialog */}
+      <Dialog open={showExamRequestDialog} onOpenChange={setShowExamRequestDialog}>
+        <DialogContent className="bg-[#1e293b] border-[#6366f1]/30 text-[#f1f5f9] max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ClipboardList className="w-5 h-5 text-[#6366f1]" />
+              Request Exam Creation
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="bg-[#6366f1]/10 p-3 rounded-lg">
+              <p className="text-[#94a3b8] text-sm">
+                Send a request to examiners to create an exam. Once accepted and created, it will be available for users to book.
+              </p>
+            </div>
+            <Input
+              placeholder="Exam Title *"
+              value={examRequestForm.title}
+              onChange={(e) => setExamRequestForm({...examRequestForm, title: e.target.value})}
+              className="bg-[#0f172a]/50 border-[#6366f1]/30 text-[#f1f5f9]"
+            />
+            <Textarea
+              placeholder="Exam Description *"
+              rows={3}
+              value={examRequestForm.description}
+              onChange={(e) => setExamRequestForm({...examRequestForm, description: e.target.value})}
+              className="bg-[#0f172a]/50 border-[#6366f1]/30 text-[#f1f5f9]"
+            />
+            <div className="grid grid-cols-2 gap-4">
+              <Select
+                value={examRequestForm.difficulty}
+                onValueChange={(value) => setExamRequestForm({...examRequestForm, difficulty: value})}
+              >
+                <SelectTrigger className="bg-[#0f172a]/50 border-[#6366f1]/30 text-[#f1f5f9]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-[#1e293b] border-[#6366f1]/30">
+                  <SelectItem value="beginner">Beginner</SelectItem>
+                  <SelectItem value="intermediate">Intermediate</SelectItem>
+                  <SelectItem value="advanced">Advanced</SelectItem>
+                </SelectContent>
+              </Select>
+              <Input
+                type="number"
+                placeholder="Duration (minutes) *"
+                value={examRequestForm.duration}
+                onChange={(e) => setExamRequestForm({...examRequestForm, duration: e.target.value})}
+                className="bg-[#0f172a]/50 border-[#6366f1]/30 text-[#f1f5f9]"
+              />
+            </div>
+            <Select
+              value={examRequestForm.priority}
+              onValueChange={(value) => setExamRequestForm({...examRequestForm, priority: value})}
+            >
+              <SelectTrigger className="bg-[#0f172a]/50 border-[#6366f1]/30 text-[#f1f5f9]">
+                <SelectValue placeholder="Select Priority" />
+              </SelectTrigger>
+              <SelectContent className="bg-[#1e293b] border-[#6366f1]/30">
+                <SelectItem value="low">Low Priority</SelectItem>
+                <SelectItem value="medium">Medium Priority</SelectItem>
+                <SelectItem value="high">High Priority</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button
+              onClick={handleCreateExamRequest}
+              className="w-full bg-gradient-to-r from-[#6366f1] to-[#14b8a6]"
+            >
+              <ClipboardList className="w-4 h-4 mr-2" />
+              Send Request to Examiner
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Job Dialog */}
       <Dialog open={showJobDialog} onOpenChange={setShowJobDialog}>
