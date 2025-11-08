@@ -29,9 +29,9 @@ services:
       - key: EMAIL_PASS
         sync: false
       - key: CLIENT_URL
-        value: https://mastersolis-frontend.vercel.app
+        value: https://hackthon-cicada.onrender.com
       - key: PRODUCTION_URL
-        value: https://mastersolis-frontend.vercel.app
+        value: https://hackthon-cicada.onrender.com
 
 databases:
   - name: mastersolis-db

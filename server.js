@@ -18,6 +18,7 @@ import analyticsRoutes from './routes/analyticsRoutes.js';
 import emailRoutes from './routes/emailRoutes.js';
 import aiRoutes from './routes/aiRoutes.js';
 import taskRoutes from './routes/taskRoutes.js';
+import healthRoutes from './routes/healthRoutes.js';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -28,6 +29,7 @@ app.use(cors({
     'http://localhost:3002',
     'http://localhost:3000',
     'http://localhost:5173',
+    'https://hackthon-cicada.onrender.com',
     process.env.CLIENT_URL,
     process.env.PRODUCTION_URL,
   ],
@@ -72,6 +74,7 @@ app.use('/api/analytics', analyticsRoutes);
 app.use('/api/email', emailRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/tasks', taskRoutes);
+app.use('/api', healthRoutes);
 
 // Error Handling Middleware
 app.use((err, req, res, next) => {
