@@ -54,7 +54,7 @@ function AppContent() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0f172a]">
+    <div className="min-h-screen bg-[#0f172a] relative">
       <Routes>
         {/* Public Routes */}
         <Route path="/" element={<Home />} />
@@ -85,7 +85,11 @@ function AppContent() {
         <Route path="/admin/examiner" element={<ProtectedRoute requireAdmin><ExaminerDashboard /></ProtectedRoute>} />
       </Routes>
 
-      <VoiceChatbot />
+      {/* Chatbot - ALWAYS RENDERED with highest z-index */}
+      <div style={{ position: 'relative', zIndex: 99999 }}>
+        <VoiceChatbot />
+      </div>
+      
       <Toaster position="top-right" />
     </div>
   );
