@@ -24,18 +24,35 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Middleware
+const allowedOrigins = [
+  'http://localhost:3002',
+  'http://localhost:3000',
+  'http://localhost:5173',
+  'https://hackthon-cicada.onrender.com',
+  'https://hackthon-cicada2.onrender.com',
+];
+
+// Add env URLs if they exist
+if (process.env.CLIENT_URL) allowedOrigins.push(process.env.CLIENT_URL);
+if (process.env.PRODUCTION_URL) allowedOrigins.push(process.env.PRODUCTION_URL);
+
 app.use(cors({
-  origin: [
-    'http://localhost:3002',
-    'http://localhost:3000',
-    'http://localhost:5173',
-    'https://hackthon-cicada.onrender.com',
-    process.env.CLIENT_URL,
-    process.env.PRODUCTION_URL,
-  ],
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps, curl, Postman)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      console.log('❌ CORS blocked origin:', origin);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+  exposedHeaders: ['Content-Range', 'X-Content-Range'],
+  maxAge: 86400, // 24 hours
 }));
 
 app.use(express.json());
