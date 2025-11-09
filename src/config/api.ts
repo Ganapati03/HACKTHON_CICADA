@@ -1,4 +1,4 @@
-export const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://hackthon-cicada2.onrender.com';
+export const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://hackthon-cicada-backend1.onrender.com';
 
 export const API_ENDPOINTS = {
   // Auth
